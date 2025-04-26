@@ -1,0 +1,24 @@
+# Ignore everything in Assets
+Assets/*
+
+# Except the Scripts folder
+!Assets/Scripts/
+
+# Ignore everything else outside Assets you don't need
+.vscode/
+Packages/
+*.csproj
+*.sln
+
+# Ignore Unity generated stuff if it exists
+[Ll]ibrary/
+[Tt]emp/
+[Bb]uild/
+[Bb]uilds/
+[Oo]bj/
+[Mm]emoryCaptures/
+Logs/
+UserSettings/
+Assembly-CSharp.csproj
+InputSystem_Actions.inputactions
+ProjectSettings/
