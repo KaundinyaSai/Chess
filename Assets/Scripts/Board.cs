@@ -12,8 +12,7 @@ public class Board : MonoBehaviour
     public string startingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     // Arrays for representing the board and pieces
-    Piece?[,] board = new Piece[8, 8]; // 2D array for the board. Null for empty squares, Piece for occupied squares
-    [HideInInspector] public Square[,] squares = new Square[8, 8];
+   [HideInInspector] public Square[,] squares = new Square[8, 8];
 
     public int turn = 0; // even = white, odd = black
 
@@ -47,7 +46,6 @@ public class Board : MonoBehaviour
                 Square squareScript = square.GetComponent<Square>();
                 
                 squares[i, j] = squareScript; // Store the square in the array
-                board[i, j] = null; // Initialize the board with null values
             }
         }
 
@@ -81,8 +79,7 @@ public class Board : MonoBehaviour
                     piece.transform.parent = transform;
                     
                     Piece pieceScript = piece.GetComponent<Piece>();
-                    board[file, 7 - i] = pieceScript;
-
+                    
                     file++;
                 }
             }
