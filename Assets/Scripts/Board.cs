@@ -14,6 +14,16 @@ public class Board : MonoBehaviour
     // Arrays for representing the board and pieces
    [HideInInspector] public Square[,] squares = new Square[8, 8];
 
+    public Piece lastMovedPiece = null!; // The last selected piece
+    // ...existing code...
+    [HideInInspector] public int lastMovedPieceStartFile = -1; // File of the last moved piece's starting position
+    [HideInInspector] public int lastMovedPieceStartRank = -1; // Rank of the last moved piece's starting position
+    [HideInInspector] public int lastMovedPieceEndFile = -1;   // File of the last moved piece's ending position
+    [HideInInspector] public int lastMovedPieceEndRank = -1;   // Rank of the last moved piece's ending position
+
+    public Piece lastClickedPiece = null!; // The last clicked piece
+
+// ...existing code...
     public int turn = 0; // even = white, odd = black
 
     public bool flipped = false; // true if the board is flipped
@@ -30,7 +40,21 @@ public class Board : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if (Input.GetMouseButtonDown(0))
+        {
+            Vector3 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            int file = Mathf.RoundToInt(worldPos.x);
+            int rank = Mathf.RoundToInt(worldPos.y);
+
+            if (file < 0 || file > 7 || rank < 0 || rank > 7) return;
+
+            Square clickedSquare = squares[file, rank];
+            if (clickedSquare != null &&
+                (clickedSquare.isHighlightedNoramal || clickedSquare.isHighlightedOccupied))
+            {
+                clickedSquare.OnClick();
+            }
+        }
     }
     void InstantiateBoard(){
         for (int j = 0; j < 8; j++) // ranks (rows)

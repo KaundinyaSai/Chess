@@ -16,13 +16,14 @@ public class Piece : MonoBehaviour
     private Vector2 originalSquarePosition; // NEW: to store starting square (rounded to grid)
     private List<Vector2> legalMoves;
 
-    [HideInInspector] public Vector3 startPos;
+    [HideInInspector] public bool moved; // Flag to indicate if the piece has moved
 
     void Start()
     {
         board = GameObject.Find("Manager").GetComponent<Board>();
         SetOccupyingSquare(); // Set the square this piece occupies
-        startPos = transform.position;
+        
+        moved = false; // Initialize moved to false
     }
 
     void OnMouseDown()
@@ -47,8 +48,26 @@ public class Piece : MonoBehaviour
             Mathf.RoundToInt(transform.position.y)
         );
 
+        // Clear highlights from all squares
+        foreach (Square square in board.squares)
+        {
+            square.isHighlightedNoramal = false; // Unhighlight the square
+            square.isHighlightedOccupied = false; // Unhighlight the square
+        }
+
         // Then pass the *original square position* into LegalMoves
         legalMoves = LegalMoves.GetLegalMovesAt(this, (int)originalSquarePosition.x, (int)originalSquarePosition.y);
+
+        foreach(Vector2 move in legalMoves){
+            Square moveSquare = board.squares[(int)move.x, (int)move.y];
+            if(moveSquare.isOccupied && moveSquare.occupyingPiece.pieceColor != pieceColor){
+                moveSquare.isHighlightedOccupied = true; // Highlight the square
+            }else{
+                moveSquare.isHighlightedNoramal = true; // Highlight the square
+            }
+        }
+
+        board.lastClickedPiece = this; // Set the last clicked piece
     }
 
 
@@ -63,24 +82,19 @@ public class Piece : MonoBehaviour
         transform.position = mouseWorldPos + offset; // Drag the piece around
     }
 
-    void OnMouseUp()
+    public void FinalizeMove(Vector3 targetPosition)
     {
-        if (!isDraggingAllowed) return;
+        int file = Mathf.RoundToInt(targetPosition.x);
+        int rank = Mathf.RoundToInt(targetPosition.y);
 
-        
-        Vector3 worldPos = transform.position;
-        
-        int file = Mathf.RoundToInt(worldPos.x);
-        int rank = Mathf.RoundToInt(worldPos.y);
-
-        //Bounds check
+        // Bounds check
         if (file < 0 || file > 7 || rank < 0 || rank > 7)
         {
             transform.position = originalSquarePosition;
             return;
         }
 
-        // 4) See if the new square is in the legal moves
+        // Check if the new square is in the legal moves
         Vector2 targetSquare = new Vector2(file, rank);
         if (!legalMoves.Contains(targetSquare))
         {
@@ -88,7 +102,7 @@ public class Piece : MonoBehaviour
             return;
         }
 
-        // 5) Check if another piece is on the destination square
+        // Handle capturing logic
         if (board.squares[file, rank].isOccupied)
         {
             Piece otherPiece = board.squares[file, rank].occupyingPiece;
@@ -103,6 +117,39 @@ public class Piece : MonoBehaviour
                 return;
             }
         }
+        else if (pieceType == PieceType.Pawn) // En Passant capture
+        {
+            int forwardDir = (pieceColor == PieceColor.White) ? 1 : -1;
+            Square enPassantSquare = board.squares[file, rank - forwardDir];
+            if (enPassantSquare.isOccupied &&
+                enPassantSquare.occupyingPiece == board.lastMovedPiece &&
+                enPassantSquare.occupyingPiece.pieceType == PieceType.Pawn)
+            {
+                Destroy(enPassantSquare.occupyingPiece.gameObject); // Capture the pawn
+                enPassantSquare.SetOccupyingPiece(null); // Clear the square
+            }
+        }
+
+        // Handle castling logic
+        if (pieceType == PieceType.King && Mathf.Abs(file - originalSquarePosition.x) == 2)
+        {
+            int rookFile = (file > originalSquarePosition.x) ? 7 : 0; // Rook's file
+            Square rookSquare = board.squares[rookFile, rank];
+            if (rookSquare.isOccupied && rookSquare.occupyingPiece.pieceType == PieceType.Rook &&
+                rookSquare.occupyingPiece.pieceColor == pieceColor)
+            {
+                Piece rook = rookSquare.occupyingPiece;
+                rook.transform.position = new Vector3(file - (rookFile > file ? 1 : -1), rank, 0); // Move the rook
+                board.squares[file - (rookFile > file ? 1 : -1), rank].SetOccupyingPiece(rook); // Set the new square
+                rookSquare.ClearOccupyingPiece();
+            }
+        }
+
+        // Update board state
+        board.lastMovedPieceStartFile = (int)originalSquarePosition.x;
+        board.lastMovedPieceStartRank = (int)originalSquarePosition.y;
+        board.lastMovedPieceEndFile = file;
+        board.lastMovedPieceEndRank = rank;
 
         occupyingSquare.SetOccupyingPiece(null); // Clear old square
         occupyingSquare = board.squares[file, rank];
@@ -110,10 +157,26 @@ public class Piece : MonoBehaviour
 
         transform.position = new Vector3(file, rank, 0); // Snap to grid
 
+        // Clear highlights
+        foreach (Vector2 legalMove in legalMoves)
+        {
+            Square moveSquare = board.squares[(int)legalMove.x, (int)legalMove.y];
+            moveSquare.isHighlightedNoramal = false; // Unhighlight the square
+            moveSquare.isHighlightedOccupied = false; // Unhighlight the square
+        }
+
         board.turn++;
+        moved = true; // Set moved to true after a successful move
+        board.lastMovedPiece = this; // Set the last moved piece
     }
 
-    
+    void OnMouseUp()
+    {
+        if (!isDraggingAllowed) return;
+
+        FinalizeMove(transform.position);
+    }
+
     bool CanMove(){
         if(pieceColor == PieceColor.White && board.turn % 2 == 0 || pieceColor == PieceColor.Black && board.turn % 2 == 1){
             return true;
@@ -135,4 +198,6 @@ public class Piece : MonoBehaviour
             }
         }
     }
+
+   
 }

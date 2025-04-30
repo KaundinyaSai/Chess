@@ -47,7 +47,7 @@ public static class LegalMoves
 
             // Forward two squares (only if first move)
             int twoStepRank = startRank + 2 * forwardDir;
-            if (piece.transform.position == piece.startPos && 
+            if (piece.moved == false && 
                 twoStepRank >= 0 && twoStepRank <= 7 && 
                 !board.squares[startFile, twoStepRank].isOccupied)
             {
@@ -71,7 +71,19 @@ public static class LegalMoves
                     moves.Add(new Vector2(targetFile, targetRank));
                 }
 
-                // En pasant later......
+                Square enPassantSquare = board.squares[targetFile, startRank];
+                if (!targetSquare.isOccupied && enPassantSquare.isOccupied &&
+                    enPassantSquare.occupyingPiece.pieceType == PieceType.Pawn &&
+                    enPassantSquare.occupyingPiece.pieceColor != piece.pieceColor &&
+                    board.lastMovedPiece == enPassantSquare.occupyingPiece)
+                {
+                    // Validate that the last move was a two-square pawn advance
+                    if (Mathf.Abs(board.lastMovedPieceStartRank - board.lastMovedPieceEndRank) == 2 &&
+                        board.lastMovedPieceStartFile == targetFile)
+                    {
+                        moves.Add(new Vector2(targetFile, targetRank));
+                    }
+                }
             }
         }
 
@@ -136,6 +148,46 @@ public static class LegalMoves
         };  
 
         List<Vector2> moves = GetMovesFromDirections(direction, startFile, startRank, piece, 2);
+
+        // Castling
+        Board board = piece.board;
+        if(!piece.moved && piece.pieceColor == PieceColor.White){ // White king
+            Piece kingSideRook = board.squares[7, 0].occupyingPiece;
+            Piece queenSideRook = board.squares[0, 0].occupyingPiece;
+
+            //KingSide
+            if(kingSideRook != null && kingSideRook.pieceType == PieceType.Rook && kingSideRook.pieceColor == PieceColor.White 
+            && !kingSideRook.moved){
+                if(!board.squares[5, 0].isOccupied && !board.squares[6, 0].isOccupied){
+                    moves.Add(new Vector2(6, 0));
+                }
+            }
+            //QueenSide
+            if(queenSideRook != null && queenSideRook.pieceType == PieceType.Rook && queenSideRook.pieceColor == PieceColor.White 
+            && !queenSideRook.moved){
+                if(!board.squares[1, 0].isOccupied && !board.squares[2, 0].isOccupied && !board.squares[3, 0].isOccupied){
+                    moves.Add(new Vector2(2, 0));
+                }
+            }
+        }else if(!piece.moved && piece.pieceColor == PieceColor.Black){ // Black king
+            Piece kingSideRook = board.squares[7, 7].occupyingPiece;
+            Piece queenSideRook = board.squares[0, 7].occupyingPiece;
+            //KingSide
+            if(kingSideRook != null && kingSideRook.pieceType == PieceType.Rook && kingSideRook.pieceColor == PieceColor.Black 
+            && !kingSideRook.moved){
+                if(!board.squares[5, 7].isOccupied && !board.squares[6, 7].isOccupied){
+                    moves.Add(new Vector2(6, 7));
+                }
+            }
+            //QueenSide
+            if(queenSideRook != null && queenSideRook.pieceType == PieceType.Rook && queenSideRook.pieceColor == PieceColor.Black 
+            && !queenSideRook.moved){
+                if(!board.squares[1, 7].isOccupied && !board.squares[2, 7].isOccupied && !board.squares[3, 7].isOccupied){
+                    moves.Add(new Vector2(2, 7));
+                }
+            }
+        }
+        
         
         return moves;
     }
