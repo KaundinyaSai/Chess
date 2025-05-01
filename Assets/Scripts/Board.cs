@@ -27,6 +27,9 @@ public class Board : MonoBehaviour
     public int turn = 0; // even = white, odd = black
 
     public bool flipped = false; // true if the board is flipped
+
+    public AudioSource moveSound = null!; // Sound to play when a piece is moved
+    public AudioSource captureSound = null!; // Sound to play when a piece is captured
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()

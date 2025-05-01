@@ -13,7 +13,7 @@ public class Piece : MonoBehaviour
 
     [HideInInspector] public Square occupyingSquare; // The square this piece occupies
 
-    private Vector2 originalSquarePosition; // NEW: to store starting square (rounded to grid)
+    [HideInInspector] public Vector2 originalSquarePosition; // NEW: to store starting square (rounded to grid)
     private List<Vector2> legalMoves;
 
     [HideInInspector] public bool moved; // Flag to indicate if the piece has moved
@@ -82,7 +82,7 @@ public class Piece : MonoBehaviour
         transform.position = mouseWorldPos + offset; // Drag the piece around
     }
 
-    public void FinalizeMove(Vector3 targetPosition)
+    public virtual void FinalizeMove(Vector3 targetPosition)
     {
         int file = Mathf.RoundToInt(targetPosition.x);
         int rank = Mathf.RoundToInt(targetPosition.y);
@@ -109,6 +109,7 @@ public class Piece : MonoBehaviour
             if (otherPiece.pieceColor != pieceColor)
             {
                 Destroy(otherPiece.gameObject); // Capture
+                board.captureSound.Play(); // Play capture sound
             }
             else
             {
@@ -116,35 +117,10 @@ public class Piece : MonoBehaviour
                 transform.position = originalSquarePosition;
                 return;
             }
+        }else{
+            board.moveSound.Play(); // Play move sound
         }
-        else if (pieceType == PieceType.Pawn) // En Passant capture
-        {
-            int forwardDir = (pieceColor == PieceColor.White) ? 1 : -1;
-            Square enPassantSquare = board.squares[file, rank - forwardDir];
-            if (enPassantSquare.isOccupied &&
-                enPassantSquare.occupyingPiece == board.lastMovedPiece &&
-                enPassantSquare.occupyingPiece.pieceType == PieceType.Pawn)
-            {
-                Destroy(enPassantSquare.occupyingPiece.gameObject); // Capture the pawn
-                enPassantSquare.SetOccupyingPiece(null); // Clear the square
-            }
-        }
-
-        // Handle castling logic
-        if (pieceType == PieceType.King && Mathf.Abs(file - originalSquarePosition.x) == 2)
-        {
-            int rookFile = (file > originalSquarePosition.x) ? 7 : 0; // Rook's file
-            Square rookSquare = board.squares[rookFile, rank];
-            if (rookSquare.isOccupied && rookSquare.occupyingPiece.pieceType == PieceType.Rook &&
-                rookSquare.occupyingPiece.pieceColor == pieceColor)
-            {
-                Piece rook = rookSquare.occupyingPiece;
-                rook.transform.position = new Vector3(file - (rookFile > file ? 1 : -1), rank, 0); // Move the rook
-                board.squares[file - (rookFile > file ? 1 : -1), rank].SetOccupyingPiece(rook); // Set the new square
-                rookSquare.ClearOccupyingPiece();
-            }
-        }
-
+        
         // Update board state
         board.lastMovedPieceStartFile = (int)originalSquarePosition.x;
         board.lastMovedPieceStartRank = (int)originalSquarePosition.y;
