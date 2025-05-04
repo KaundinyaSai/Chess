@@ -1,51 +1,57 @@
-#nullable enable
+
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 public class Board : MonoBehaviour
 {
-    public GameObject LightSquarePrefab = null!;
-    public GameObject DarkSquarePrefab = null!;
+    public GameObject LightSquarePrefab;
+    public GameObject DarkSquarePrefab;
 
     public GameObject[] pieces = new GameObject[12]; // 0: wp 1: wb 2: wn 3: wr 4: wq 5: wk 6: bp 7: bb 8: bn 9: br 10: bq 11: bk
 
     public string startingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     // Arrays for representing the board and pieces
-   [HideInInspector] public Square[,] squares = new Square[8, 8];
+    [HideInInspector] public Square[,] squares = new Square[8, 8];
 
-    public Piece lastMovedPiece = null!; // The last selected piece
-    // ...existing code...
-    [HideInInspector] public int lastMovedPieceStartFile = -1; // File of the last moved piece's starting position
-    [HideInInspector] public int lastMovedPieceStartRank = -1; // Rank of the last moved piece's starting position
-    [HideInInspector] public int lastMovedPieceEndFile = -1;   // File of the last moved piece's ending position
-    [HideInInspector] public int lastMovedPieceEndRank = -1;   // Rank of the last moved piece's ending position
+    [HideInInspector] public Piece lastMovedPiece; 
+    
+    [HideInInspector] public int lastMovedPieceStartFile = -1; 
+    [HideInInspector] public int lastMovedPieceStartRank = -1;
+    [HideInInspector] public int lastMovedPieceEndFile = -1;   
+    [HideInInspector] public int lastMovedPieceEndRank = -1;   
 
-    public Piece lastClickedPiece = null!; // The last clicked piece
+    [HideInInspector] public Piece lastClickedPiece; 
 
-// ...existing code...
+
     public int turn = 0; // even = white, odd = black
 
-    public bool flipped = false; // true if the board is flipped
+    public bool flipped = false; 
 
-    public AudioSource moveSound = null!; // Sound to play when a piece is moved
-    public AudioSource captureSound = null!; // Sound to play when a piece is captured
+    public AudioSource moveSound;
+    public AudioSource captureSound; 
     
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    public List<Piece> piecesOnBoard = new List<Piece>(); // List of all pieces on the board
+
+    Camera mainCamera;
+
+    public King whiteKing, blackKing;
+
+    
     void Start()
     {
         InstantiateBoard();
         turn = 0; // White starts first
 
         transform.rotation = flipped ? Quaternion.Euler(0, 0, 180) : Quaternion.identity; // Rotate the board if flipped
+        mainCamera = Camera.main;
     }
-
-    // Update is called once per frame
     void Update()
     {
         if (Input.GetMouseButtonDown(0))
         {
-            Vector3 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector3 worldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
             int file = Mathf.RoundToInt(worldPos.x);
             int rank = Mathf.RoundToInt(worldPos.y);
 
@@ -73,6 +79,8 @@ public class Board : MonoBehaviour
                 Square squareScript = square.GetComponent<Square>();
                 
                 squares[i, j] = squareScript; // Store the square in the array
+                squareScript.file = i; // Set the file (x-coordinate) of the square
+                squareScript.rank = j; // Set the rank (y-coordinate) of the square
             }
         }
 
@@ -97,7 +105,7 @@ public class Board : MonoBehaviour
                 }
                 else
                 {
-                    GameObject? piecePrefab = GetPiecePrefab(c);
+                    GameObject piecePrefab = GetPiecePrefab(c);
                     if (piecePrefab == null) continue;
                     
                     Quaternion rotation = flipped ? Quaternion.Euler(0, 0, 180) : Quaternion.identity; // Rotate the piece if the board is flipped
@@ -106,14 +114,25 @@ public class Board : MonoBehaviour
                     piece.transform.parent = transform;
                     
                     Piece pieceScript = piece.GetComponent<Piece>();
-                    
+                    piecesOnBoard.Add(pieceScript);
                     file++;
+
+                    if(c == 'K'){
+                        whiteKing = pieceScript as King; // Cast to King type
+                    }else if(c == 'k'){
+                        blackKing = pieceScript as King; // Cast to King type
+                    }
                 }
             }
         }
+
+        foreach(Piece piece in piecesOnBoard){
+            King ownKing = piece.pieceColor == PieceColor.White ? whiteKing : blackKing;
+            piece.ownKing = ownKing; // Set the king reference for each piece
+        }
     }
 
-    GameObject? GetPiecePrefab(char pieceChar){
+    GameObject GetPiecePrefab(char pieceChar){
         switch (pieceChar)
         {
             case 'P': return pieces[0]; // White Pawn
@@ -129,6 +148,76 @@ public class Board : MonoBehaviour
             case 'K': return pieces[5]; // White King
             case 'k': return pieces[11]; // Black King
             default: return null!;
+        }
+    }
+
+    public void MarkAttacks(Piece piece){
+        List<Vector2> attackedSquares = LegalMoves.GetLegalMovesAt(piece, 
+        (int)piece.transform.position.x, (int)piece.transform.position.y); 
+
+        foreach (Vector2 square in attackedSquares)
+        {
+            Square attackedSquare = squares[(int)square.x, (int)square.y];
+            if (piece.pieceColor == PieceColor.White)
+            {
+                attackedSquare.isAttackedByWhite = true; 
+            }
+            else
+            {
+                attackedSquare.isAttackedByBlack = true;
+            }
+        }
+    }
+
+    public void UnmarkAttacks(Piece piece)
+    {
+        List<Vector2> previouslyAttackedSquares = LegalMoves.GetLegalMovesAt(piece, 
+            (int)piece.originalSquarePosition.x, 
+            (int)piece.originalSquarePosition.y);
+
+        foreach (Vector2 square in previouslyAttackedSquares)
+        {
+            Square attackedSquare = squares[(int)square.x, (int)square.y];
+            if (piece.pieceColor == PieceColor.White)
+            {
+                attackedSquare.isAttackedByWhite = false;
+            }
+            else
+            {
+                attackedSquare.isAttackedByBlack = false;
+            }
+        }
+    }
+
+    public void RemarkAttacks(){
+        foreach(Piece piece in piecesOnBoard){
+            foreach(Vector2 square in piece.legalMoves){
+                Square attackedSquare = squares[(int)square.x, (int)square.y];
+                if(piece.pieceColor == PieceColor.White){
+                    attackedSquare.isAttackedByWhite = true; 
+                }else{
+                    attackedSquare.isAttackedByBlack = true; 
+                }
+            }
+        }
+    }
+
+    public void AfterTurn(Piece Piece){
+        foreach(Piece piece in piecesOnBoard){
+            piece.GetLegalMoves(new Vector2(piece.transform.position.x, piece.transform.position.y)); // Update legal moves for all pieces
+        }
+
+        lastMovedPiece = Piece; // Set the last moved piece
+        UnmarkAttacks(Piece); // Unmark attacks for the piece that just moved
+        MarkAttacks(Piece);
+        RemarkAttacks();
+    }
+
+    public King GetKing(PieceColor pieceColor){
+        if(pieceColor == PieceColor.White){
+            return whiteKing; // Return the white king
+        }else{
+            return blackKing; // Return the black king
         }
     }
 }

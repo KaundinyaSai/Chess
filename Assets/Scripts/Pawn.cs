@@ -32,6 +32,8 @@ public class Pawn : Piece{
             newPiece.pieceColor = pieceColor;
             newPiece.board = board;
             newPiece.transform.parent = board.transform;
+            board.piecesOnBoard.Add(newPiece); // Add the new piece to the board
+            board.piecesOnBoard.Remove(this); // Remove the old pawn from the board
             Destroy(gameObject); // Destroy the pawn
         }
     }

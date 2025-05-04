@@ -1,13 +1,61 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
 public class King : Piece{
     
-    public bool isInCheck = false; // Flag to indicate if the king is in check
-    public bool isInCheckMate = false; // Flag to indicate if the king is in checkmate
+    public bool isInCheck = false; 
+    public bool isInCheckMate = false;
+    public List<Piece> checkingPieces = new List<Piece>(); // List to store pieces checking the king
+    public override void Start()
+    {
+        base.Start();
+    }
+    
+    public void Update(){
+        CheckForChecks();
+    }
+
+    public void CheckForChecks()
+    {
+        isInCheck = false;
+        checkingPieces.Clear();
+
+        int kingFile = occupyingSquare.file;
+        int kingRank = occupyingSquare.rank;
+
+        foreach (Piece piece in board.piecesOnBoard)
+        {
+            if (piece.pieceColor != pieceColor)
+            {
+                List<Vector2> attackedSquares = LegalMoves.GetLegalMovesAt(piece, piece.occupyingSquare.file, piece.occupyingSquare.rank);
+
+                foreach (Vector2 square in attackedSquares)
+                {
+                    if ((int)square.x == kingFile && (int)square.y == kingRank)
+                    {
+                        isInCheck = true;
+                        if (!checkingPieces.Contains(piece))
+                        {
+                            checkingPieces.Add(piece);
+                            if (checkingPieces.Count >= 2)
+                                break; // We only need to know it's double check
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!isInCheck)
+        {
+            checkingPieces.Clear();
+        }
+    }
+
+    
     public override void FinalizeMove(Vector3 targetPosition){
-        base.FinalizeMove(targetPosition); // Call the base class method to finalize the move
+        base.FinalizeMove(targetPosition);
         
+        // Castling logic
         int rank = Mathf.RoundToInt(targetPosition.y);
         int file = Mathf.RoundToInt(targetPosition.x);
         

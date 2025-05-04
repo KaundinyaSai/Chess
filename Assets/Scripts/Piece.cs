@@ -9,21 +9,29 @@ public class Piece : MonoBehaviour
     Vector3 offset;
     [HideInInspector] public Board board;
 
-    bool isDraggingAllowed = false; // Flag to control dragging
+    bool isDraggingAllowed = false; 
 
-    [HideInInspector] public Square occupyingSquare; // The square this piece occupies
+    [HideInInspector] public Square occupyingSquare;
 
-    [HideInInspector] public Vector2 originalSquarePosition; // NEW: to store starting square (rounded to grid)
-    private List<Vector2> legalMoves;
+    [HideInInspector] public Vector2 originalSquarePosition; 
+    [HideInInspector] public List<Vector2> legalMoves;
 
-    [HideInInspector] public bool moved; // Flag to indicate if the piece has moved
+    [HideInInspector] public bool moved; 
 
-    void Start()
+    Camera mainCamera;
+
+    public King ownKing;
+
+    public virtual void Start()
     {
         board = GameObject.Find("Manager").GetComponent<Board>();
-        SetOccupyingSquare(); // Set the square this piece occupies
+        SetOccupyingSquare();
+        GetLegalMoves(transform.position);
         
-        moved = false; // Initialize moved to false
+        moved = false;
+        board.MarkAttacks(this);
+
+        mainCamera = Camera.main;
     }
 
     void OnMouseDown()
@@ -42,7 +50,6 @@ public class Piece : MonoBehaviour
 
         offset = transform.position - mouseWorldPos;
         
-        // NEW: Store the *grid snapped* starting position
         originalSquarePosition = new Vector2(
             Mathf.RoundToInt(transform.position.x),
             Mathf.RoundToInt(transform.position.y)
@@ -51,35 +58,34 @@ public class Piece : MonoBehaviour
         // Clear highlights from all squares
         foreach (Square square in board.squares)
         {
-            square.isHighlightedNoramal = false; // Unhighlight the square
-            square.isHighlightedOccupied = false; // Unhighlight the square
+            square.isHighlightedNoramal = false;
+            square.isHighlightedOccupied = false;
         }
 
-        // Then pass the *original square position* into LegalMoves
-        legalMoves = LegalMoves.GetLegalMovesAt(this, (int)originalSquarePosition.x, (int)originalSquarePosition.y);
+        GetLegalMoves(originalSquarePosition);
 
         foreach(Vector2 move in legalMoves){
             Square moveSquare = board.squares[(int)move.x, (int)move.y];
             if(moveSquare.isOccupied && moveSquare.occupyingPiece.pieceColor != pieceColor){
-                moveSquare.isHighlightedOccupied = true; // Highlight the square
+                moveSquare.isHighlightedOccupied = true;
             }else{
-                moveSquare.isHighlightedNoramal = true; // Highlight the square
+                moveSquare.isHighlightedNoramal = true;
             }
         }
 
-        board.lastClickedPiece = this; // Set the last clicked piece
+        board.lastClickedPiece = this; 
     }
 
 
     void OnMouseDrag()
     {
-        if(!isDraggingAllowed) return; // Prevent dragging if not allowed
+        if(!isDraggingAllowed) return; 
         
         Vector3 mouseScreenPos = Input.mousePosition;
-        mouseScreenPos.z = Camera.main.WorldToScreenPoint(transform.position).z;
-        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
+        mouseScreenPos.z = mainCamera.WorldToScreenPoint(transform.position).z;
+        Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(mouseScreenPos);
 
-        transform.position = mouseWorldPos + offset; // Drag the piece around
+        transform.position = mouseWorldPos + offset;
     }
 
     public virtual void FinalizeMove(Vector3 targetPosition)
@@ -99,6 +105,7 @@ public class Piece : MonoBehaviour
         if (!legalMoves.Contains(targetSquare))
         {
             transform.position = originalSquarePosition;
+            occupyingSquare.SetOccupyingPiece(this); 
             return;
         }
 
@@ -108,6 +115,7 @@ public class Piece : MonoBehaviour
             Piece otherPiece = board.squares[file, rank].occupyingPiece;
             if (otherPiece.pieceColor != pieceColor)
             {
+                board.piecesOnBoard.Remove(otherPiece); // Remove the captured piece from the board
                 Destroy(otherPiece.gameObject); // Capture
                 board.captureSound.Play(); // Play capture sound
             }
@@ -140,10 +148,11 @@ public class Piece : MonoBehaviour
             moveSquare.isHighlightedNoramal = false; // Unhighlight the square
             moveSquare.isHighlightedOccupied = false; // Unhighlight the square
         }
-
+        
         board.turn++;
         moved = true; // Set moved to true after a successful move
-        board.lastMovedPiece = this; // Set the last moved piece
+        board.AfterTurn(this); // Update the board state after the turn
+        //ownKing.CheckForChecks();
     }
 
     void OnMouseUp()
@@ -161,7 +170,7 @@ public class Piece : MonoBehaviour
         }
     }
 
-    void SetOccupyingSquare()
+    public void SetOccupyingSquare()
     {
         foreach (Square square in board.squares)
         {
@@ -175,5 +184,12 @@ public class Piece : MonoBehaviour
         }
     }
 
-   
+    public void GetLegalMoves(Vector2 originalSquarePosition){
+        // Get the legal moves for this piece
+        legalMoves = LegalMoves.GetLegalMovesAt(this, (int)originalSquarePosition.x, (int)originalSquarePosition.y);
+    }
+
+    public bool IsSlidingPiece(){
+        return pieceType == PieceType.Rook || pieceType == PieceType.Bishop || pieceType == PieceType.Queen;
+    }
 }

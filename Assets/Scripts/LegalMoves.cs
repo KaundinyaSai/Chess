@@ -5,24 +5,37 @@ public static class LegalMoves
 {
     public static List<Vector2> GetLegalMovesAt(Piece piece, int file, int rank)
     {
+        List<Vector2> pseudoLegalMoves;
+        List<Vector2> legalMoves = new List<Vector2>();
+
+        Board board = piece.board;
+
         switch (piece.pieceType)
         {
             case PieceType.Pawn:
-                return GetPawnMoves(piece, file, rank);
+                pseudoLegalMoves = GetPawnMoves(piece, file, rank);
+                break;
             case PieceType.Rook:
-                return GetRookMoves(piece, file, rank);
+                pseudoLegalMoves = GetRookMoves(piece, file, rank);
+                break;
             case PieceType.Knight:
-                return GetKnightMoves(piece, file, rank);
+                pseudoLegalMoves = GetKnightMoves(piece, file, rank);
+                break;
             case PieceType.Bishop:
-                return GetBishopMoves(piece, file, rank);
+                pseudoLegalMoves = GetBishopMoves(piece, file, rank);
+                break;
             case PieceType.Queen:
-                return GetQueenMoves(piece, file, rank);
+                pseudoLegalMoves = GetQueenMoves(piece, file, rank);
+                break;
             case PieceType.King:
-                return GetKingMoves(piece, file, rank);
+                pseudoLegalMoves = GetKingMoves(piece, file, rank);
+                break;
             default:
                 return new List<Vector2>();
         }
-            
+
+        legalMoves = FilterPseudoLegalMoves(pseudoLegalMoves, piece);
+        return legalMoves;
     }
     
     static List<Vector2> GetPawnMoves(Piece piece, int startFile, int startRank)
@@ -139,7 +152,8 @@ public static class LegalMoves
         return moves;
     }
 
-    static List<Vector2> GetKingMoves(Piece piece, int startFile, int startRank){
+    static List<Vector2> GetKingMoves(Piece piece, int startFile, int startRank)
+    {
         Vector2[] direction = new Vector2[]{
             new Vector2(1, 0), new Vector2(-1,0),
             new Vector2(0, 1), new Vector2(0, -1),
@@ -149,49 +163,69 @@ public static class LegalMoves
 
         List<Vector2> moves = GetMovesFromDirections(direction, startFile, startRank, piece, 2);
 
-        // Castling
+        // Castling logic (unchanged)
         Board board = piece.board;
-        if(!piece.moved && piece.pieceColor == PieceColor.White){ // White king
+        if (!piece.moved && piece.pieceColor == PieceColor.White)
+        {
             Piece kingSideRook = board.squares[7, 0].occupyingPiece;
             Piece queenSideRook = board.squares[0, 0].occupyingPiece;
 
-            //KingSide
-            if(kingSideRook != null && kingSideRook.pieceType == PieceType.Rook && kingSideRook.pieceColor == PieceColor.White 
-            && !kingSideRook.moved){
-                if(!board.squares[5, 0].isOccupied && !board.squares[6, 0].isOccupied){
+            if (kingSideRook != null && kingSideRook.pieceType == PieceType.Rook && kingSideRook.pieceColor == PieceColor.White && !kingSideRook.moved)
+            {
+                if (!board.squares[5, 0].isOccupied && !board.squares[6, 0].isOccupied)
+                {
                     moves.Add(new Vector2(6, 0));
                 }
             }
-            //QueenSide
-            if(queenSideRook != null && queenSideRook.pieceType == PieceType.Rook && queenSideRook.pieceColor == PieceColor.White 
-            && !queenSideRook.moved){
-                if(!board.squares[1, 0].isOccupied && !board.squares[2, 0].isOccupied && !board.squares[3, 0].isOccupied){
+            if (queenSideRook != null && queenSideRook.pieceType == PieceType.Rook && queenSideRook.pieceColor == PieceColor.White && !queenSideRook.moved)
+            {
+                if (!board.squares[1, 0].isOccupied && !board.squares[2, 0].isOccupied && !board.squares[3, 0].isOccupied)
+                {
                     moves.Add(new Vector2(2, 0));
                 }
             }
-        }else if(!piece.moved && piece.pieceColor == PieceColor.Black){ // Black king
+        }
+        else if (!piece.moved && piece.pieceColor == PieceColor.Black)
+        {
             Piece kingSideRook = board.squares[7, 7].occupyingPiece;
             Piece queenSideRook = board.squares[0, 7].occupyingPiece;
-            //KingSide
-            if(kingSideRook != null && kingSideRook.pieceType == PieceType.Rook && kingSideRook.pieceColor == PieceColor.Black 
-            && !kingSideRook.moved){
-                if(!board.squares[5, 7].isOccupied && !board.squares[6, 7].isOccupied){
+
+            if (kingSideRook != null && kingSideRook.pieceType == PieceType.Rook && kingSideRook.pieceColor == PieceColor.Black && !kingSideRook.moved)
+            {
+                if (!board.squares[5, 7].isOccupied && !board.squares[6, 7].isOccupied)
+                {
                     moves.Add(new Vector2(6, 7));
                 }
             }
-            //QueenSide
-            if(queenSideRook != null && queenSideRook.pieceType == PieceType.Rook && queenSideRook.pieceColor == PieceColor.Black 
-            && !queenSideRook.moved){
-                if(!board.squares[1, 7].isOccupied && !board.squares[2, 7].isOccupied && !board.squares[3, 7].isOccupied){
+            if (queenSideRook != null && queenSideRook.pieceType == PieceType.Rook && queenSideRook.pieceColor == PieceColor.Black && !queenSideRook.moved)
+            {
+                if (!board.squares[1, 7].isOccupied && !board.squares[2, 7].isOccupied && !board.squares[3, 7].isOccupied)
+                {
                     moves.Add(new Vector2(2, 7));
                 }
             }
         }
-        
-        
+
+        // Avoid modifying the list while iterating
+        List<Vector2> movesToRemove = new List<Vector2>();
+        foreach (Vector2 move in moves)
+        {
+            Square targetSquare = board.squares[(int)move.x, (int)move.y];
+            bool isAttacked = piece.pieceColor == PieceColor.White ? targetSquare.isAttackedByBlack : targetSquare.isAttackedByWhite;
+            if (isAttacked)
+            {
+                movesToRemove.Add(move);
+            }
+        }
+
+        // Remove invalid moves
+        foreach (Vector2 move in movesToRemove)
+        {
+            moves.Remove(move);
+        }
+
         return moves;
     }
-
     static List<Vector2> GetMovesFromDirections(Vector2[] directions, int startFile, int startRank, Piece piece, int maxDistance){
         List<Vector2> moves = new List<Vector2>();
         
@@ -215,4 +249,73 @@ public static class LegalMoves
         }
         return moves;
     }
+
+    static List<Vector2> FilterPseudoLegalMoves(List<Vector2> moves, Piece piece)
+    {
+        if (piece.pieceType == PieceType.King) return moves;
+
+        King king = piece.ownKing;
+
+        if (!king.isInCheck) return moves;
+
+        Piece checkingPiece = king.checkingPieces[0];
+        Vector2 kingPos = new Vector2(king.occupyingSquare.file, king.occupyingSquare.rank);
+        Vector2 checkerPos = new Vector2(checkingPiece.occupyingSquare.file, checkingPiece.occupyingSquare.rank);
+
+        if (king.checkingPieces.Count == 1)
+        {
+            List<Vector2> movesToKeep = new List<Vector2>();
+
+            if (checkingPiece.IsSlidingPiece())
+            {
+                // Calculate the step direction from king to checking piece
+                Vector2 dir = new Vector2(
+                    Mathf.Sign(checkerPos.x - kingPos.x),
+                    Mathf.Sign(checkerPos.y - kingPos.y)
+                );
+
+                // Collect blocking squares between king and checker
+                List<Vector2> blockingSquares = new List<Vector2>();
+                Vector2 current = kingPos + dir;
+                while (current != checkerPos)
+                {
+                    blockingSquares.Add(current);
+                    current += dir;
+                }
+
+                // Add capture square (the checker's position)
+                blockingSquares.Add(checkerPos);
+
+                // Keep only moves that block the check or capture the checker
+                foreach (Vector2 move in moves)
+                {
+                    if (blockingSquares.Contains(move))
+                    {
+                        movesToKeep.Add(move);
+                    }
+                }
+            }
+            else
+            {
+                // Non-sliding piece: only valid move is to capture it
+                foreach (Vector2 move in moves)
+                {
+                    if (move == checkerPos)
+                    {
+                        movesToKeep.Add(move);
+                    }
+                }
+            }
+
+            moves = movesToKeep;
+        }
+        else
+        {
+            // Double check: only legal move is for the king to move
+            moves.Clear();
+        }
+
+        return moves;
+    }
+
 }

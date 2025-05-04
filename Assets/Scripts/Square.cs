@@ -13,6 +13,10 @@ public class Square : MonoBehaviour
 
     Board board;
 
+    public bool isAttackedByWhite = false;
+    public bool isAttackedByBlack = false;
+
+    public int file, rank; 
     public void SetOccupyingPiece(Piece piece)
     {
         occupyingPiece = piece;
