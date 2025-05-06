@@ -22,6 +22,8 @@ public class Piece : MonoBehaviour
 
     public King ownKing;
 
+    public bool isPinned;
+    public Vector2 pinnedDirection; 
     public virtual void Start()
     {
         board = GameObject.Find("Manager").GetComponent<Board>();
@@ -152,7 +154,7 @@ public class Piece : MonoBehaviour
         board.turn++;
         moved = true; // Set moved to true after a successful move
         board.AfterTurn(this); // Update the board state after the turn
-        //ownKing.CheckForChecks();
+        
     }
 
     void OnMouseUp()
@@ -192,4 +194,20 @@ public class Piece : MonoBehaviour
     public bool IsSlidingPiece(){
         return pieceType == PieceType.Rook || pieceType == PieceType.Bishop || pieceType == PieceType.Queen;
     }
+
+    public bool AttacksInDir(Vector2 dir)
+    {
+        foreach (Vector2 move in legalMoves)
+        {
+            Vector2 diff = move - new Vector2(occupyingSquare.file, occupyingSquare.rank);
+            Vector2 moveDir = new Vector2(Mathf.Sign(diff.x), Mathf.Sign(diff.y));
+
+            if (moveDir == dir)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

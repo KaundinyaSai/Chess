@@ -189,16 +189,19 @@ public class Board : MonoBehaviour
         }
     }
 
-    public void RemarkAttacks(){
-        foreach(Piece piece in piecesOnBoard){
-            foreach(Vector2 square in piece.legalMoves){
-                Square attackedSquare = squares[(int)square.x, (int)square.y];
-                if(piece.pieceColor == PieceColor.White){
-                    attackedSquare.isAttackedByWhite = true; 
-                }else{
-                    attackedSquare.isAttackedByBlack = true; 
-                }
-            }
+    public void RemarkAttacks()
+    {
+        // Clear all attack markers
+        foreach (Square square in squares)
+        {
+            square.isAttackedByWhite = false;
+            square.isAttackedByBlack = false;
+        }
+
+        // Recalculate attack markers for all pieces
+        foreach (Piece piece in piecesOnBoard)
+        {
+            MarkAttacks(piece);
         }
     }
 
@@ -211,6 +214,13 @@ public class Board : MonoBehaviour
         UnmarkAttacks(Piece); // Unmark attacks for the piece that just moved
         MarkAttacks(Piece);
         RemarkAttacks();
+        UpdatePinnedPieces();
+
+        blackKing.CheckForChecks(); // Check for checks after the turn
+        whiteKing.CheckForChecks(); // Check for checks after the turn
+
+        blackKing.CheckForCheckMate(); // Check for checkmate after the turn
+        whiteKing.CheckForCheckMate(); // Check for checkmate after the turn
     }
 
     public King GetKing(PieceColor pieceColor){
@@ -218,6 +228,77 @@ public class Board : MonoBehaviour
             return whiteKing; // Return the white king
         }else{
             return blackKing; // Return the black king
+        }
+    }
+
+    public void UpdatePinnedPieces()
+    {
+        // First, clear all current pin info
+        foreach (Piece piece in piecesOnBoard)
+        {
+            piece.isPinned = false;
+            piece.pinnedDirection = Vector2Int.zero;
+        }
+        // Check pins for both sides
+        CheckPins(whiteKing);
+        CheckPins(blackKing);
+    }
+    public bool IsInBounds(Vector2 pos){
+        return pos.x >= 0 && pos.x < 8 && pos.y >= 0 && pos.y < 8; // Check if the position is within the board bounds
+    }
+
+    private void CheckPins(Piece king)
+    {
+        Vector2[] directions = {
+            new Vector2(1,0), new Vector2(-1,0), // horizontal
+            new Vector2(0,1), new Vector2(0,-1), // vertical
+            new Vector2(1,1), new Vector2(1,-1), new Vector2(-1,1), new Vector2(-1,-1) // diagonals
+        };
+
+        foreach (Vector2 dir in directions)
+        {
+            bool blockerFound = false;
+            Piece blocker = null;
+
+            Vector2 pos = new Vector2(king.occupyingSquare.file, king.occupyingSquare.rank) + dir;
+            
+
+            while (IsInBounds(pos))
+            {
+                Square square = squares[(int)pos.x, (int)pos.y];
+                Piece p = square.occupyingPiece; // Get the piece at the current position
+
+                if (p != null && p.pieceType != PieceType.King)
+                {
+                    if (p.pieceColor == king.pieceColor)
+                    {
+                        if (!blockerFound)
+                        {
+                            blockerFound = true;
+                            blocker = p;
+                        }
+                        else
+                        {
+                            break; // second friendly → no pin
+                        }
+                    }
+                    else
+                    {
+                        // enemy piece
+                        if (p.IsSlidingPiece())
+                        {
+                            if (blockerFound)
+                            {
+                                blocker.isPinned = true;
+                                blocker.pinnedDirection = dir;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                pos += dir;
+            }
         }
     }
 }
