@@ -40,13 +40,8 @@ public static class LegalMoves
     {
         List<Vector2> moves = new List<Vector2>();
 
-        int forwardDir = 1;
+        int forwardDir = piece.pieceColor == PieceColor.White ? 1 : -1;
 
-        if ((!piece.board.flipped && piece.pieceColor == PieceColor.Black) ||
-            (piece.board.flipped && piece.pieceColor == PieceColor.White))
-        {
-            forwardDir = -1;
-        }
 
         Board board = piece.board;
 
@@ -348,15 +343,16 @@ public static class LegalMoves
                 List<Vector2> blockingSquares = new List<Vector2>();
                 Vector2 current = kingPos + dir;
                 
-                if(dir != Vector2.zero) 
+                if (dir != Vector2.zero) 
                 {
-                    while (current != checkerPos)
+                    int steps = 0;
+                    while (current != checkerPos && steps < 8) // max distance on board
                     {
                         blockingSquares.Add(current);
                         current += dir;
+                        steps++;
                     }
                 }
-                
                 blockingSquares.Add(checkerPos);
 
                 // Keep only moves that block the check or capture the checker

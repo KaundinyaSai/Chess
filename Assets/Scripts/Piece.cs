@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+
 using UnityEngine;
 
 public class Piece : MonoBehaviour
@@ -193,21 +195,6 @@ public class Piece : MonoBehaviour
 
     public bool IsSlidingPiece(){
         return pieceType == PieceType.Rook || pieceType == PieceType.Bishop || pieceType == PieceType.Queen;
-    }
-
-    public bool AttacksInDir(Vector2 dir)
-    {
-        foreach (Vector2 move in legalMoves)
-        {
-            Vector2 diff = move - new Vector2(occupyingSquare.file, occupyingSquare.rank);
-            Vector2 moveDir = new Vector2(Mathf.Sign(diff.x), Mathf.Sign(diff.y));
-
-            if (moveDir == dir)
-            {
-                return true;
-            }
-        }
-        return false;
     }
 
 }

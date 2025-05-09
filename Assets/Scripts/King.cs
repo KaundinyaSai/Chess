@@ -97,21 +97,25 @@ public class King : Piece{
         Castling(targetPosition);
     }
 
-    void Castling(Vector2 targetPosition){
+    void Castling(Vector2 targetPosition) {
         int rank = Mathf.RoundToInt(targetPosition.y);
         int file = Mathf.RoundToInt(targetPosition.x);
-        
+
         int rookFile = (file > originalSquarePosition.x) ? 7 : 0; // Rook's file
         Square rookSquare = board.squares[rookFile, rank];
         if (rookSquare.isOccupied && rookSquare.occupyingPiece.pieceType == PieceType.Rook &&
-            rookSquare.occupyingPiece.pieceColor == pieceColor)
-        {
-            if(transform.position.x != originalSquarePosition.x 
-                && transform.position.x - originalSquarePosition.x != 1 
-                && transform.position.x - originalSquarePosition.x != -1){ 
+            rookSquare.occupyingPiece.pieceColor == pieceColor) {
+            
+            // Ensure the king is moving two squares (castling move)
+            if (Mathf.Abs(file - originalSquarePosition.x) == 2) {
                 Piece rook = rookSquare.occupyingPiece;
-                rook.transform.position = new Vector3(file - (rookFile > file ? 1 : -1), rank, 0); // Move the rook
-                board.squares[file - (rookFile > file ? 1 : -1), rank].SetOccupyingPiece(rook); // Set the new square
+
+                // Determine the rook's new file based on castling side
+                int rookNewFile = (file > originalSquarePosition.x) ? file - 1 : file + 1;
+
+                // Move the rook
+                rook.transform.position = new Vector3(rookNewFile, rank, 0);
+                board.squares[rookNewFile, rank].SetOccupyingPiece(rook); // Set the new square
                 rookSquare.ClearOccupyingPiece();
             }
         }

@@ -1,8 +1,7 @@
-
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-
+using UnityEngine.Scripting.APIUpdating;
 public class Board : MonoBehaviour
 {
     public GameObject LightSquarePrefab;
@@ -37,8 +36,6 @@ public class Board : MonoBehaviour
     Camera mainCamera;
 
     public King whiteKing, blackKing;
-
-    
     void Start()
     {
         InstantiateBoard();
